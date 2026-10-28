@@ -38,13 +38,128 @@ button.x{padding:2px 8px;color:var(--err)}button:disabled{opacity:.6;cursor:wait
 @media(max-width:980px){.right{position:static;max-height:none}}
 .sheet{container-type:inline-size;background:#fff;color:#111;border:1px solid var(--line);border-radius:3px;overflow:hidden}
 .sheet img.tim{display:block;width:91.8%;height:auto;margin:1.2cqw auto 0}
-.sheet .corpo{padding:.1cqw 14.3cqw 8cqw;font:2.01cqw/1.18 Arial,Helvetica,sans-serif}.fmtbar{display:flex;gap:5px;flex-wrap:wrap;margin:8px 0}.fmtbar select,.fmtbar input{width:auto;max-width:150px;padding:4px}.sheet [contenteditable="true"]{outline:2px solid var(--acc);outline-offset:3px;min-height:100px}
+.sheet .corpo{padding:.1cqw 14.3cqw 8cqw;font:2.01cqw/1.18 Arial,Helvetica,sans-serif}
 .sheet p{margin:0;text-align:justify;min-height:1.18em}.sheet p.e{margin-left:60%}.sheet p.f{text-indent:13.3%}
 .cvr{display:grid;grid-template-columns:1.6fr 1fr 110px auto;gap:6px;margin-bottom:6px;align-items:center}@media(max-width:560px){.cvr{grid-template-columns:1fr 1fr}}
 .sheet .rod{padding:0 14.3cqw 2.4cqw;font:1.6cqw Arial,sans-serif;text-align:center}.sheet .rod small{display:block;text-align:left;color:#808080;font-size:1.2cqw}
 .pbm{border-top:1px dashed #aaa;color:#888;font:1.4cqw Arial,sans-serif;text-align:center;margin:2cqw 0 1cqw;padding-top:.6cqw}.fl{display:flex;gap:8px;align-items:center;margin-bottom:6px}.fl img{width:56px;height:56px;object-fit:cover;border-radius:4px;border:1px solid var(--line)}
 .hbar{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 </style>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<style>
+#sapleg-auth-gate{position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:24px;background:#f3f1ea;color:#1d2420;font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;text-align:center}
+#sapleg-auth-gate .box{max-width:460px;padding:24px;background:#fff;border:1px solid #d6d8cf;border-radius:12px;box-shadow:0 12px 40px #0002}
+#sapleg-auth-gate p{margin:8px 0;color:#5d6860}
+</style>
+<script>
+(function(){
+  const firebaseConfig={apiKey:"AIzaSyAzE6e7wNJGmNJ5x18_wvo4-hLUJqbDW0A",authDomain:"sapleg.firebaseapp.com",projectId:"sapleg",storageBucket:"sapleg.firebasestorage.app",messagingSenderId:"982947784877",appId:"1:982947784877:web:08eadb96ab3126e570be24",measurementId:"G-SVG85Q8E0W"};
+  function portalLogin(){
+    const target=new URL('index.html',window.location.href);
+    target.searchParams.set('login','1');
+    target.searchParams.set('returnTo',window.location.pathname+window.location.search+window.location.hash);
+    window.location.replace(target.href);
+  }
+  document.addEventListener('DOMContentLoaded',function(){
+    const gate=document.createElement('div');gate.id='sapleg-auth-gate';
+    gate.innerHTML='<div class="box"><strong>Verificando acesso ao SAPLEG…</strong><p>Aguarde enquanto validamos sua sessão.</p></div>';
+    document.body.appendChild(gate);
+    try{
+      if(!firebase.apps.length)firebase.initializeApp(firebaseConfig);
+      const auth=firebase.auth(),db=firebase.firestore();
+      let completed=false;
+      auth.onAuthStateChanged(async function(user){
+        if(completed)return;
+        if(!user){completed=true;portalLogin();return;}
+        try{
+          let doc=await db.collection('users').doc(user.uid).get();
+          if(!doc.exists && user.email){
+            try{doc=await db.collection('users').doc(user.email.replace(/[^a-zA-Z0-9]/g,'_')).get();}catch(e){doc=null;}
+          }
+          const master=user.email==='allanfadel.leg@gmail.com'||user.email==='allanfadel@gmail.com';
+          if((doc&&doc.exists)||master){completed=true;gate.remove();return;}
+          completed=true;await auth.signOut();portalLogin();
+        }catch(error){
+          console.error('Falha ao validar acesso SAPLEG:',error);
+          gate.innerHTML='<div class="box"><strong>Não foi possível validar seu acesso.</strong><p>Confira sua conexão e as permissões do Firebase. Retornaremos ao portal para tentar novamente.</p><button id="sapleg-auth-retry" type="button">Voltar ao portal</button></div>';
+          const btn=document.getElementById('sapleg-auth-retry');if(btn)btn.addEventListener('click',portalLogin);
+        }
+      });
+    }catch(error){
+      console.error('Falha ao inicializar autenticação SAPLEG:',error);
+      gate.innerHTML='<div class="box"><strong>Falha ao iniciar a autenticação.</strong><p>Verifique se os scripts do Firebase estão acessíveis e tente novamente.</p><button id="sapleg-auth-retry" type="button">Voltar ao portal</button></div>';
+      const btn=document.getElementById('sapleg-auth-retry');if(btn)btn.addEventListener('click',portalLogin);
+    }
+  });
+})();
+</script>
+
+<style>
+#sapleg-cloud-sync{position:fixed;right:14px;bottom:14px;z-index:99998;background:#fff;color:#17212b;border:1px solid #cbd5e1;border-radius:12px;box-shadow:0 8px 28px #0002;padding:12px;width:min(310px,calc(100vw - 28px));font:13px/1.4 system-ui,sans-serif}
+#sapleg-cloud-sync strong{display:block;font-size:14px;margin-bottom:5px}#sapleg-cloud-sync p{margin:4px 0 9px;color:#475569}#sapleg-cloud-sync .actions{display:flex;gap:7px;flex-wrap:wrap}#sapleg-cloud-sync button{border:0;border-radius:7px;padding:8px 10px;cursor:pointer;font-weight:600;background:#1d4ed8;color:#fff}#sapleg-cloud-sync button.secondary{background:#e2e8f0;color:#17212b}#sapleg-cloud-sync button:disabled{opacity:.55;cursor:wait}#sapleg-cloud-status{display:block;margin-top:8px;color:#475569;font-size:12px}
+@media(prefers-color-scheme:dark){#sapleg-cloud-sync{background:#111827;color:#f9fafb;border-color:#374151}#sapleg-cloud-sync p,#sapleg-cloud-status{color:#cbd5e1}#sapleg-cloud-sync button.secondary{background:#374151;color:#f9fafb}}
+</style>
+<script>
+(function(){
+  const MODULE_ID="proposituras";
+  const MODULE_LABEL="Gerador de Proposituras";
+  const KEYS=["gerador-proposituras", "proposituras-vereadores", "proposituras-ia"];
+  function initCloudSync(){
+    if(!window.firebase||!firebase.auth||!firebase.firestore)return;
+    const panel=document.createElement('section');panel.id='sapleg-cloud-sync';
+    panel.innerHTML='<strong>☁ SAPLEG — cópia na nuvem</strong><p>Salve uma cópia dos dados deste módulo na sua conta. O salvamento local continua ativo.</p><div class="actions"><button type="button" id="sapleg-cloud-save">Salvar na nuvem</button><button type="button" class="secondary" id="sapleg-cloud-restore">Restaurar cópia</button></div><span id="sapleg-cloud-status">Verificando sessão…</span>';
+    document.body.appendChild(panel);
+    const status=panel.querySelector('#sapleg-cloud-status'),saveBtn=panel.querySelector('#sapleg-cloud-save'),restoreBtn=panel.querySelector('#sapleg-cloud-restore');
+    let activeUser=null, activeTenantId=null;
+    const dataRef=()=>{
+      if(!activeUser||!activeTenantId) throw new Error('Usuário sem Câmara vinculada. Solicite ao administrador do SAPLEG.');
+      return firebase.firestore().collection('tenants').doc(activeTenantId).collection('users').doc(activeUser.uid).collection('moduleData').doc(MODULE_ID);
+    };
+    function busy(on){saveBtn.disabled=on;restoreBtn.disabled=on;}
+    firebase.auth().onAuthStateChanged(async user=>{
+      activeUser=user||null; activeTenantId=null; saveBtn.disabled=true; restoreBtn.disabled=true;
+      if(!user){status.textContent='Entre no SAPLEG para usar a cópia na nuvem.';return;}
+      try{
+        const profile=await firebase.firestore().collection('users').doc(user.uid).get();
+        activeTenantId=profile.exists?(profile.data().tenantId||null):null;
+        if(!activeTenantId){status.textContent='Seu usuário ainda não está vinculado a uma Câmara. Solicite ao administrador mestre.';return;}
+        saveBtn.disabled=false;restoreBtn.disabled=false;status.textContent='Conectado à Câmara '+activeTenantId+'. Cópia manual na nuvem.';
+      }catch(e){status.textContent='Não foi possível verificar a Câmara vinculada. ('+(e.code||'erro')+')';}
+    });
+    saveBtn.addEventListener('click',async()=>{
+      if(!activeUser){status.textContent='Sessão não encontrada. Entre novamente no SAPLEG.';return;}
+      busy(true);status.textContent='Salvando cópia…';
+      try{
+        const payload={};let bytes=0;
+        KEYS.forEach(k=>{const value=localStorage.getItem(k);if(value!==null){payload[k]=value;bytes+=value.length;}});
+        if(!Object.keys(payload).length){status.textContent='Não foram encontrados dados locais deste módulo para salvar.';return;}
+        if(bytes>850000){status.textContent='A cópia é muito grande para um único documento. Exporte os dados pelo recurso normal do módulo e solicite uma migração dividida.';return;}
+        await dataRef().set({schemaVersion:2,module:MODULE_ID,ownerUid:activeUser.uid,tenantId:activeTenantId,payload:payload,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+        status.textContent='Cópia salva na nuvem. Itens: '+Object.keys(payload).length+'.';
+      }catch(e){console.error('SAPLEG cloud save',e);status.textContent='Falha ao salvar. Verifique as regras do Firestore e a conexão. ('+(e.code||'erro')+')';}
+      finally{busy(false);}
+    });
+    restoreBtn.addEventListener('click',async()=>{
+      if(!activeUser){status.textContent='Sessão não encontrada. Entre novamente no SAPLEG.';return;}
+      if(!confirm('Restaurar a cópia da nuvem substituirá os dados locais deste módulo neste navegador. Recomenda-se salvar a cópia atual na nuvem antes de continuar. Deseja prosseguir?'))return;
+      busy(true);status.textContent='Buscando cópia na nuvem…';
+      try{
+        const snap=await dataRef().get();
+        if(!snap.exists){status.textContent='Ainda não existe uma cópia na nuvem para este módulo.';return;}
+        const payload=snap.data().payload||{};
+        KEYS.forEach(k=>{if(Object.prototype.hasOwnProperty.call(payload,k))localStorage.setItem(k,payload[k]);else localStorage.removeItem(k);});
+        status.textContent='Cópia restaurada. Recarregando o módulo…';
+        setTimeout(()=>window.location.reload(),700);
+      }catch(e){console.error('SAPLEG cloud restore',e);status.textContent='Falha ao restaurar. Verifique as regras do Firestore e a conexão. ('+(e.code||'erro')+')';}
+      finally{busy(false);}
+    });
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initCloudSync);else initCloudSync();
+})();
+</script>
 </head>
 <body>
 <header><div class="hbar"><div><h1>Gerador de Proposituras</h1><p>Indicações, requerimentos e moções com o timbre da Câmara, modelos prontos e redação com IA.</p></div><button type="button" id="cfgb">⚙ Configurações</button></div></header>
@@ -89,12 +204,6 @@ button.x{padding:2px 8px;color:var(--err)}button:disabled{opacity:.6;cursor:wait
 </div>
 <div class="right">
 <section class="card"><h2>Conferência</h2><div id="chk"></div></section>
-<section class="card"><h2>Pré-visualização e timbre</h2>
-<div class="bar"><button type="button" id="editPrev">✏️ Editar pré-visualização</button><button type="button" id="restaurarTimbre">Retornar ao timbre original</button><button type="button" id="removerTimbre">Sem timbre</button></div>
-<label for="arquivoTimbre">Escolher timbre personalizado (JPG ou PNG)</label><input id="arquivoTimbre" type="file" accept="image/png,image/jpeg">
-<div id="previewTimbre" style="margin-top:8px"></div><div id="statusTimbre" class="msg ok">Timbre atual: Câmara Municipal de Santa Bárbara d’Oeste.</div>
-<div id="formatToolbar" class="fmtbar" hidden><button type="button" data-cmd="bold"><b>N</b></button><button type="button" data-cmd="underline"><u>S</u></button><button type="button" data-cmd="italic"><i>I</i></button><button type="button" data-cmd="justifyLeft">Esquerda</button><button type="button" data-cmd="justifyCenter">Centralizar</button><button type="button" data-cmd="justifyRight">Direita</button><button type="button" data-cmd="justifyFull">Justificar</button><select id="fmtFont" aria-label="Fonte"><option value="Arial">Arial</option><option value="Times New Roman">Times New Roman</option><option value="Calibri">Calibri</option><option value="Georgia">Georgia</option></select><select id="fmtSize" aria-label="Tamanho"><option value="10">10 pt</option><option value="11">11 pt</option><option value="12" selected>12 pt</option><option value="14">14 pt</option><option value="16">16 pt</option><option value="18">18 pt</option></select><input type="color" id="fmtColor" aria-label="Cor da fonte" value="#111111"><button type="button" id="fmtClear">Limpar formatação</button></div>
-</section>
 <div class="bar"><button type="button" class="p" id="dl">Baixar .docx</button><button type="button" id="cp">Copiar texto</button><button type="button" id="rs">Limpar</button></div>
 <div id="note" class="msg ok" hidden></div>
 <div class="sheet"><img class="tim" id="timg" alt="Câmara Municipal de Santa Bárbara d’Oeste"><div class="corpo" id="prev"></div><div class="rod"><small id="rini"></small>Página 1 de <span id="rpag">1</span></div></div>
@@ -149,7 +258,6 @@ MOC("protesto","Protesto ou repúdio",{objeto:"contra [objeto do protesto]",cons
 const MODELOS={ind:INDS,req:REQS,moc:MOCS},TIPOS=[["ind","Indicação"],["req","Requerimento"],["moc","Moção"]];
 /* estado */
 const KEY="gerador-proposituras";
-let customTimbre="", customTimbreW=0, customTimbreH=0, timbreEnabled=true, previewEditing=false, previewEdited=false, savedPreviewRange=null;
 const novo=(t,m)=>({tipo:t,modelo:m,...JSON.parse(JSON.stringify(modelo(t,m).def||{}))});
 function modelo(t,m){const a=MODELOS[t||p.tipo];return a.find(x=>x.id==(m||p.modelo))||a[0]}
 let p={tipo:"ind",modelo:"tapa",autor:VER[0][0],cargo:VER[0][2],assin:VER[0][1],ini:"",siscam:true,num:"",ano:"2026",data:"2026-10-07",ia:""};
@@ -245,14 +353,8 @@ function docParts(){
 }
 /* interface */
 const nota=t=>{const n=$("note");n.hidden=false;n.textContent=t};
-function atualizarPreviewTimbre(){const box=$("previewTimbre"),st=$("statusTimbre");if(!box||!st)return;if(customTimbre&&timbreEnabled){box.innerHTML=`<img alt="Prévia do timbre personalizado" src="${customTimbre}" style="display:block;max-width:100%;max-height:180px;object-fit:contain;margin:auto;border:1px solid var(--line);background:white">`;st.className="msg ok";st.textContent="Timbre personalizado selecionado. Será usado na pré-visualização e no Word."}else if(!timbreEnabled){box.innerHTML="";st.className="msg w";st.textContent="Timbre desativado. O documento será gerado sem imagem de cabeçalho."}else{box.innerHTML="";st.className="msg ok";st.textContent="Timbre original: Câmara Municipal de Santa Bárbara d’Oeste."}}
-function rememberPreviewSelection(){const sel=window.getSelection();if(sel&&sel.rangeCount){const r=sel.getRangeAt(0);if($("prev").contains(r.commonAncestorContainer))savedPreviewRange=r.cloneRange()}}
-function restorePreviewSelection(){const pv=$("prev");pv.focus();const sel=window.getSelection();if(savedPreviewRange&&pv.contains(savedPreviewRange.commonAncestorContainer)){sel.removeAllRanges();sel.addRange(savedPreviewRange)}}
-function stylePreviewSelection(prop,val){restorePreviewSelection();const sel=window.getSelection();if(!sel||!sel.rangeCount||sel.isCollapsed){nota("Selecione primeiro o texto que deseja formatar.");return}const range=sel.getRangeAt(0),span=document.createElement("span");span.style[prop]=val;try{span.appendChild(range.extractContents());range.insertNode(span);sel.removeAllRanges();const nr=document.createRange();nr.selectNodeContents(span);sel.addRange(nr);savedPreviewRange=nr.cloneRange();previewEdited=true}catch(e){nota("Selecione um trecho de texto dentro da pré-visualização.")}}
 function render(){
- if(!previewEdited)$("prev").innerHTML=html(blocos());
- if($("timg")){if(customTimbre&&timbreEnabled){$("timg").src=customTimbre;$("timg").style.display="block"}else if(!timbreEnabled){$("timg").style.display="none"}else{$("timg").src="data:image/png;base64,"+TIM;$("timg").style.display="block"}}
- atualizarPreviewTimbre();
+ $("prev").innerHTML=html(blocos());
  $("chk").innerHTML=confere().map(([t,x])=>`<div class="msg ${t}">${esc(x)}</div>`).join("");
  $("manual").hidden=p.siscam;
  $("rini").textContent=p.ini||"";
@@ -294,28 +396,19 @@ document.addEventListener("click",e=>{const t=e.target;
  else if(t.dataset.cvdel!==undefined){VER.splice(+t.dataset.cvdel,1);salvaVer();cfgl();topo();render()}
  else if(t.dataset.del){const[k,i]=t.dataset.del.split(":");p[k].splice(+i,1);campos();render()}});
 $("timg").src="data:image/png;base64,"+TIM;
-$("rs").onclick=()=>{if(confirm("Voltar ao modelo original?")){previewEditing=false;previewEdited=false;$("prev").contentEditable="false";$("formatToolbar").hidden=true;$("editPrev").textContent="✏️ Editar pré-visualização";troca(p.tipo,p.modelo)}};
+$("rs").onclick=()=>{if(confirm("Voltar ao modelo original?")){troca(p.tipo,p.modelo)}};
 $("cp").onclick=()=>{try{const r=document.createRange();r.selectNodeContents($("prev"));const g=getSelection();g.removeAllRanges();g.addRange(r);const ok=document.execCommand("copy");g.removeAllRanges();nota(ok?"Texto copiado.":"Selecione o texto e use Ctrl+C.")}catch(e){nota("Selecione o texto e use Ctrl+C.")}};
 $("dl").onclick=async()=>{
  const nome=`${TIPOS.find(t=>t[0]==p.tipo)[1]} - ${modelo().nome.replace(/[\\/:*?"<>|“”]/g,"")}.docx`;
  try{
-  if(previewEdited){const tim=customTimbre&&timbreEnabled?`<div style="text-align:center;margin-bottom:12px"><img src="${customTimbre}" style="max-width:100%;max-height:180px;object-fit:contain"></div>`:(timbreEnabled?`<div style="text-align:center;margin-bottom:12px"><img src="data:image/png;base64,${TIM}" style="width:91.8%;height:auto"></div>`:"");const blob=new Blob([`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><title>${TIPOS.find(t=>t[0]==p.tipo)[1]}</title><style>@page{size:A4;margin:2.5cm 2cm 2cm}body{font:12pt Arial,sans-serif;line-height:1.25}p{margin:0 0 6pt;text-align:justify}</style></head><body>${tim}${$("prev").innerHTML}</body></html>`],{type:"text/html;charset=utf-8"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`${TIPOS.find(t=>t[0]==p.tipo)[1]} - ${modelo().nome.replace(/[\\/:*?"<>|“”]/g,"")}.html`;document.body.appendChild(a);a.click();a.remove();nota("Pré-visualização editada salva em HTML, preservando texto, formatação e timbre. Abra no Word e use Salvar como para converter em .docx.");return}
   if(typeof JSZip==="undefined"){nota("Não consegui carregar o gerador de .docx (sem internet?). Use “Copiar texto”.");return}
-  const z=new JSZip(),P=docParts();if(customTimbre&&timbreEnabled){const sc=Math.min(6942278/(customTimbreW||1200),1332000/(customTimbreH||300)),cx=Math.round((customTimbreW||1200)*sc),cy=Math.round((customTimbreH||300)*sc);P["word/header1.xml"]=P["word/header1.xml"].replace(/cx="6942278" cy="1332000"/g,`cx="${cx}" cy="${cy}"`)}if(!timbreEnabled)P["word/header1.xml"]=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p/></w:hdr>`;for(const k in P)z.file(k,P[k]);if(timbreEnabled){const dataT=customTimbre||("data:image/png;base64,"+TIM);z.file("word/media/timbre.png",dataT.split(",")[1],{base64:true})}(p.fotos||[]).forEach((f,i)=>z.file(`word/media/foto${i}.jpg`,f.data.split(",")[1],{base64:true}));
+  const z=new JSZip(),P=docParts();for(const k in P)z.file(k,P[k]);z.file("word/media/timbre.png",TIM,{base64:true});(p.fotos||[]).forEach((f,i)=>z.file(`word/media/foto${i}.jpg`,f.data.split(",")[1],{base64:true}));
   const data=await z.generateAsync({type:"blob",mimeType:"application/vnd.openxmlformats-officedocument.wordprocessingml.document"});
   const d=(typeof claude!=="undefined"&&claude.use)?await claude.use("downloads"):null;
   if(d){await d.save({filename:nome,data});nota("Arquivo salvo: "+nome);return}
   const a=document.createElement("a");a.href=URL.createObjectURL(data);a.download=nome;document.body.appendChild(a);a.click();a.remove();nota("Arquivo baixado: "+nome);
  }catch(err){if(!err||err.code!="declined")nota("Não foi possível baixar; use “Copiar texto”.")}
 };
-/* edição direta da pré-visualização e timbre */
-$("prev").addEventListener("input",e=>{previewEdited=true});$("prev").addEventListener("mouseup",rememberPreviewSelection);$("prev").addEventListener("keyup",rememberPreviewSelection);
-document.querySelectorAll("#formatToolbar [data-cmd]").forEach(b=>{b.addEventListener("mousedown",e=>e.preventDefault());b.addEventListener("click",()=>{restorePreviewSelection();document.execCommand(b.dataset.cmd,false,null);rememberPreviewSelection();previewEdited=true})});
-$("fmtFont").addEventListener("mousedown",rememberPreviewSelection);$("fmtFont").addEventListener("change",()=>stylePreviewSelection("fontFamily",$("fmtFont").value));$("fmtSize").addEventListener("mousedown",rememberPreviewSelection);$("fmtSize").addEventListener("change",()=>stylePreviewSelection("fontSize",$("fmtSize").value+"pt"));$("fmtColor").addEventListener("mousedown",rememberPreviewSelection);$("fmtColor").addEventListener("change",()=>stylePreviewSelection("color",$("fmtColor").value));
-$("fmtClear").addEventListener("mousedown",e=>e.preventDefault());$("fmtClear").addEventListener("click",()=>{restorePreviewSelection();document.execCommand("removeFormat",false,null);rememberPreviewSelection();previewEdited=true});
-$("editPrev").onclick=()=>{const pv=$("prev");if(!previewEditing){previewEditing=true;pv.contentEditable="true";$("formatToolbar").hidden=false;$("editPrev").textContent="✅ Concluir edição";pv.focus();nota("Edição ativada. Edite o texto diretamente e selecione trechos para usar a barra de formatação.")}else{previewEditing=false;previewEdited=true;pv.contentEditable="false";$("formatToolbar").hidden=true;$("editPrev").textContent="✏️ Editar pré-visualização";nota("Edição concluída. O texto permanece na pré-visualização. Ao baixar, será oferecido um HTML compatível com Word para preservar as alterações.")}};
-$("arquivoTimbre").addEventListener("change",async e=>{const f=e.target.files&&e.target.files[0];if(!f)return;if(!/^image\/(png|jpeg)$/.test(f.type)){nota("Escolha uma imagem PNG ou JPG.");e.target.value="";return}try{const url=await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(f)});const im=await new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=url});const scale=Math.min(1,1800/im.width,900/im.height),w=Math.max(1,Math.round(im.width*scale)),h=Math.max(1,Math.round(im.height*scale)),c=document.createElement("canvas");c.width=w;c.height=h;const ctx=c.getContext("2d");ctx.fillStyle="#fff";ctx.fillRect(0,0,w,h);ctx.drawImage(im,0,0,w,h);customTimbre=c.toDataURL("image/png");customTimbreW=w;customTimbreH=h;timbreEnabled=true;previewEdited=false;previewEditing=false;$("prev").contentEditable="false";$("formatToolbar").hidden=true;render();nota("Timbre personalizado aplicado. Confira a pré-visualização.")}catch(err){nota("Não consegui carregar essa imagem. Tente outro JPG ou PNG.")}});
-$("restaurarTimbre").onclick=()=>{customTimbre="";customTimbreW=customTimbreH=0;timbreEnabled=true;$("arquivoTimbre").value="";previewEdited=false;render();nota("Timbre original da Câmara restaurado.")};$("removerTimbre").onclick=()=>{timbreEnabled=false;previewEdited=false;render();nota("Timbre desativado.")};
 /* configuração: vereadores */
 function cfgl(){$("cfgl").innerHTML=VER.map((v,i)=>`<div class="cvr"><input data-cv="${i}:0" data-old="${esc(v[0])}" value="${esc(v[0])}" placeholder="Nome completo" aria-label="Nome completo"><input data-cv="${i}:1" value="${esc(v[1])}" placeholder="Assinatura" aria-label="Nome na assinatura"><select data-cv="${i}:2" aria-label="Cargo"><option${v[2]=="Vereador"?" selected":""}>Vereador</option><option${v[2]=="Vereadora"?" selected":""}>Vereadora</option></select><button type="button" class="x" data-cvdel="${i}" aria-label="Remover">✕</button></div>`).join("")}
 $("cfgb").onclick=()=>{const c=$("cfg");c.hidden=!c.hidden;if(!c.hidden){cfgl();iaUI();c.scrollIntoView({block:"start"})}};
